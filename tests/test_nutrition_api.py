@@ -3,14 +3,19 @@ from urllib.parse import unquote
 import pytest
 import requests
 
+import src.nutrition_api as nutrition_api
 from src.nutrition_api import _get_nutrition_per_100g_cached, get_nutrition_per_100g
 
 
 @pytest.fixture(autouse=True)
 def clear_nutrition_cache():
     _get_nutrition_per_100g_cached.cache_clear()
+    nutrition_api._DATA_GO_KR_BACKOFF_UNTIL = 0.0
+    nutrition_api._DATA_GO_KR_BACKOFF_DETAIL = ""
     yield
     _get_nutrition_per_100g_cached.cache_clear()
+    nutrition_api._DATA_GO_KR_BACKOFF_UNTIL = 0.0
+    nutrition_api._DATA_GO_KR_BACKOFF_DETAIL = ""
 
 
 def test_get_nutrition_per_100g_falls_back_to_local_catalog(monkeypatch):
@@ -248,4 +253,57 @@ def test_get_nutrition_per_100g_summarizes_data_go_kr_500(monkeypatch):
     assert nutrition["source"] == "local_catalog"
     assert second_nutrition["source"] == "local_catalog"
     assert "HTTPError" not in nutrition["detail"]
-    assert request_count <= 3
+    assert request_count <= 6
+
+
+def test_get_nutrition_per_100g_tries_next_data_go_kr_endpoint_after_500(monkeypatch):
+    requested_urls = []
+
+    class ErrorResponse:
+        status_code = 500
+        headers = {"content-type": "text/plain"}
+        text = "Unexpected errors"
+
+        def raise_for_status(self):
+            raise requests.HTTPError("server error", response=self)
+
+    class SuccessResponse:
+        status_code = 200
+        headers = {"content-type": "application/json"}
+        text = ""
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "response": {
+                    "body": {
+                        "items": [
+                            {
+                                "DESC_KOR": "rice",
+                                "NUTR_CONT1": "130",
+                                "NUTR_CONT2": "28",
+                                "NUTR_CONT3": "2.5",
+                                "NUTR_CONT4": "0.3",
+                            }
+                        ]
+                    }
+                }
+            }
+
+    def fake_get(url, params=None, timeout=None, headers=None):
+        requested_urls.append(url)
+        if len(set(requested_urls)) == 1:
+            return ErrorResponse()
+        return SuccessResponse()
+
+    monkeypatch.setenv("DATA_GO_KR_API_KEY", "test-key")
+    monkeypatch.delenv("FOODSAFETYKOREA_API_KEY", raising=False)
+    monkeypatch.delenv("NUTRITION_API_URL", raising=False)
+    monkeypatch.setattr("src.nutrition_api.requests.get", fake_get)
+
+    nutrition = get_nutrition_per_100g("rice")
+
+    assert nutrition["source"] == "data_go_kr_api"
+    assert len(set(requested_urls)) == 2

@@ -12,8 +12,8 @@ from src.food_catalog import get_food_profile, normalize_food_key
 from src.settings import get_setting
 
 DATA_GO_KR_DEFAULT_URLS = [
-    "https://apis.data.go.kr/1471000/FoodNtrCpntDbInfo/getFoodNtrCpntDbInq",
     "https://apis.data.go.kr/1471000/FoodNtrCpntDbInfo02/getFoodNtrCpntDbInq02",
+    "https://apis.data.go.kr/1471000/FoodNtrCpntDbInfo/getFoodNtrCpntDbInq",
 ]
 FOODSAFETYKOREA_SERVICE_ID = "I2790"
 FOODSAFETYKOREA_BASE_URL = "https://openapi.foodsafetykorea.go.kr/api"
@@ -85,6 +85,7 @@ def _fetch_from_data_go_kr(food_key: str, search_name: str | None = None) -> Tup
     limit = get_setting("DATA_GO_KR_RESULT_LIMIT", "5")
     query_param = get_setting("DATA_GO_KR_QUERY_PARAM", "DESC_KOR")
     details = []
+    transient_failure_seen = False
 
     for api_url in _data_go_kr_urls():
         for query in _query_candidates(food_key, search_name):
@@ -100,9 +101,8 @@ def _fetch_from_data_go_kr(food_key: str, search_name: str | None = None) -> Tup
                 if error_detail:
                     details.append(error_detail)
                     if _is_transient_data_go_kr_failure(error_detail):
-                        _DATA_GO_KR_BACKOFF_UNTIL = time.monotonic() + DATA_GO_KR_BACKOFF_SECONDS
-                        _DATA_GO_KR_BACKOFF_DETAIL = _friendly_api_failure_detail(error_detail)
-                        return None, _DATA_GO_KR_BACKOFF_DETAIL
+                        transient_failure_seen = True
+                        break
                     continue
 
                 nutrition = _parse_nutrition_payload(payload)
@@ -120,6 +120,11 @@ def _fetch_from_data_go_kr(food_key: str, search_name: str | None = None) -> Tup
                 details.append(detail)
             except requests.RequestException as exc:
                 details.append(_request_exception_detail(exc, "data.go.kr"))
+
+    if transient_failure_seen:
+        _DATA_GO_KR_BACKOFF_UNTIL = time.monotonic() + DATA_GO_KR_BACKOFF_SECONDS
+        _DATA_GO_KR_BACKOFF_DETAIL = _friendly_api_failure_detail("; ".join(details))
+        return None, _DATA_GO_KR_BACKOFF_DETAIL
 
     return None, f"data.go.kr returned no nutrition rows; tried {_shorten_detail('; '.join(details))}"
 
