@@ -1,6 +1,15 @@
 from urllib.parse import unquote
 
-from src.nutrition_api import get_nutrition_per_100g
+import pytest
+
+from src.nutrition_api import _get_nutrition_per_100g_cached, get_nutrition_per_100g
+
+
+@pytest.fixture(autouse=True)
+def clear_nutrition_cache():
+    _get_nutrition_per_100g_cached.cache_clear()
+    yield
+    _get_nutrition_per_100g_cached.cache_clear()
 
 
 def test_get_nutrition_per_100g_falls_back_to_local_catalog(monkeypatch):
@@ -43,7 +52,7 @@ def test_get_nutrition_per_100g_uses_data_go_kr_api(monkeypatch):
                 }
             }
 
-    def fake_get(url, params, timeout):
+    def fake_get(url, params=None, timeout=None, headers=None):
         requested.append((url, params))
         assert timeout == 8
         return FakeResponse()
@@ -92,7 +101,7 @@ def test_get_nutrition_per_100g_uses_search_name_for_data_go_kr(monkeypatch):
                 }
             }
 
-    def fake_get(url, params, timeout):
+    def fake_get(url, params=None, timeout=None, headers=None):
         requested.append((url, params))
         return FakeResponse()
 
@@ -125,7 +134,7 @@ def test_get_nutrition_per_100g_retries_aliases(monkeypatch):
         def json(self):
             return self.payload
 
-    def fake_get(url, params, timeout):
+    def fake_get(url, params=None, timeout=None, headers=None):
         requested_queries.append(params["DESC_KOR"])
         if params["DESC_KOR"] != "쌀밥":
             return FakeResponse({"response": {"body": {"items": []}}})
@@ -171,7 +180,7 @@ def test_get_nutrition_per_100g_limits_query_retries(monkeypatch):
         def json(self):
             return {"response": {"body": {"items": []}}}
 
-    def fake_get(url, params, timeout):
+    def fake_get(url, params=None, timeout=None, headers=None):
         requested_queries.append(params["DESC_KOR"])
         return FakeResponse()
 
@@ -197,7 +206,7 @@ def test_get_nutrition_per_100g_reports_data_go_kr_non_json(monkeypatch):
         def json(self):
             raise ValueError("not json")
 
-    def fake_get(url, params, timeout):
+    def fake_get(url, params=None, timeout=None, headers=None):
         return FakeResponse()
 
     monkeypatch.setenv("FOODSAFETYKOREA_API_KEY", "test-key")
