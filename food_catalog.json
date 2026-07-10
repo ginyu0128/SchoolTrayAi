@@ -1,0 +1,93 @@
+{
+  "default_density_g_per_ml": 0.85,
+  "foods": [
+    {
+      "food_key": "rice",
+      "display_name": "\ubc25",
+      "aliases": ["\uc300\ubc25", "\ud770\ubc25", "\ubc31\ubbf8\ubc25", "\uacf5\uae30\ubc25", "rice"],
+      "density_g_per_ml": 0.85,
+      "volume_profile": "standard",
+      "nutrition_per_100g": {"calories": 130, "carbs_g": 28.0, "protein_g": 2.5, "fat_g": 0.3}
+    },
+    {
+      "food_key": "soup",
+      "display_name": "\uad6d",
+      "aliases": ["\ucc0c\uac1c", "\ub41c\uc7a5\uad6d", "\uce74\ub808", "\uce74\ub808\ub77c\uc774\uc2a4", "\uce74\ub808\ub77c\uc774\uc2a4 \ub8e8", "\uce74\ub808\uc18c\uc2a4", "soup"],
+      "density_g_per_ml": 0.75,
+      "volume_profile": "standard",
+      "nutrition_per_100g": {"calories": 70, "carbs_g": 8.0, "protein_g": 3.0, "fat_g": 2.0}
+    },
+    {
+      "food_key": "kimchi",
+      "display_name": "\uae40\uce58",
+      "aliases": ["\ubc30\ucd94\uae40\uce58", "\uae4d\ub450\uae30", "kimchi"],
+      "density_g_per_ml": 0.85,
+      "volume_profile": "standard",
+      "nutrition_per_100g": {"calories": 25, "carbs_g": 4.0, "protein_g": 1.0, "fat_g": 0.2}
+    },
+    {
+      "food_key": "vegetable",
+      "display_name": "\ub098\ubb3c/\ucc44\uc18c\ubc18\ucc2c",
+      "aliases": ["\ub098\ubb3c", "\ucc44\uc18c", "\uc57c\ucc44", "\ubb34\uce68", "\ucf69\ub098\ubb3c\ubb34\uce68", "\uc624\uc774\ubb34\uce68", "\uc57c\ucc44\ubcf6\uc74c", "vegetable"],
+      "density_g_per_ml": 0.85,
+      "volume_profile": "standard",
+      "nutrition_per_100g": {"calories": 35, "carbs_g": 7.0, "protein_g": 1.5, "fat_g": 0.2}
+    },
+    {
+      "food_key": "meat",
+      "display_name": "\uace0\uae30\ubc18\ucc2c",
+      "aliases": ["\uace0\uae30", "\uc81c\uc721\ubcf6\uc74c", "\ubd88\uace0\uae30", "\ub2ed\uace0\uae30", "\ub3fc\uc9c0\uace0\uae30", "meat"],
+      "density_g_per_ml": 0.85,
+      "volume_profile": "standard",
+      "nutrition_per_100g": {"calories": 250, "carbs_g": 0.0, "protein_g": 20.0, "fat_g": 18.0}
+    },
+    {
+      "food_key": "fried_chicken",
+      "display_name": "\ub2ed\uace0\uae30\ud280\uae40",
+      "aliases": ["\uce58\ud0a8\ub108\uac9f", "\ub2ed\uace0\uae30\ud280\uae40", "\uce58\ud0a8", "\ud0d5\uc218\uc721", "\ud280\uae40", "fried_chicken"],
+      "density_g_per_ml": 0.80,
+      "volume_profile": "standard",
+      "nutrition_per_100g": {"calories": 280, "carbs_g": 15.0, "protein_g": 16.0, "fat_g": 17.0}
+    },
+    {
+      "food_key": "sausage",
+      "display_name": "\uc18c\uc2dc\uc9c0",
+      "aliases": ["\uc18c\uc2dc\uc9c0", "\uc18c\uc138\uc9c0", "\ube44\uc5d4\ub098\uc18c\uc2dc\uc9c0", "\ube44\uc5d4\ub098\uc18c\uc138\uc9c0", "\uc18c\uc2dc\uc9c0\ubcf6\uc74c", "\uc18c\uc138\uc9c0\ubcf6\uc74c", "\ud584", "sausage"],
+      "density_g_per_ml": 0.85,
+      "volume_profile": "standard",
+      "nutrition_per_100g": {"calories": 300, "carbs_g": 7.0, "protein_g": 13.0, "fat_g": 25.0}
+    },
+    {
+      "food_key": "fish",
+      "display_name": "\uc0dd\uc120/\ud574\uc0b0\ubb3c\ubc18\ucc2c",
+      "aliases": ["\uc0dd\uc120", "\uc0dd\uc120\uad6c\uc774", "\uc624\uc9d5\uc5b4", "\uc624\uc9d5\uc5b4\uc870\ub9bc", "\uc5b4\ubb35", "\ud574\uc0b0\ubb3c", "fish"],
+      "density_g_per_ml": 0.85,
+      "volume_profile": "standard",
+      "nutrition_per_100g": {"calories": 180, "carbs_g": 0.0, "protein_g": 22.0, "fat_g": 10.0}
+    },
+    {
+      "food_key": "fruit",
+      "display_name": "\uacfc\uc77c",
+      "aliases": ["\uacfc\uc77c", "\ubcf5\uc22d\uc544", "\uc0ac\uacfc", "\ubc30", "\uade4", "\ud30c\uc778\uc560\ud50c", "fruit"],
+      "density_g_per_ml": 0.80,
+      "volume_profile": "standard",
+      "nutrition_per_100g": {"calories": 55, "carbs_g": 14.0, "protein_g": 0.5, "fat_g": 0.2}
+    },
+    {
+      "food_key": "tteokgalbi",
+      "display_name": "\ub5a1\uac08\ube44",
+      "aliases": ["\ub5a1\uac08\ube44", "\ub3d9\uadf8\ub791\ub561", "\uc804", "\ub108\ube44\uc544\ub2c8", "tteokgalbi"],
+      "density_g_per_ml": 0.85,
+      "volume_profile": "flat_piece",
+      "nutrition_per_100g": {"calories": 260, "carbs_g": 9.0, "protein_g": 14.0, "fat_g": 18.0}
+    },
+    {
+      "food_key": "unknown",
+      "display_name": "\uc54c \uc218 \uc5c6\uc74c",
+      "aliases": ["\uc54c \uc218 \uc5c6\uc74c", "unknown"],
+      "density_g_per_ml": 0.85,
+      "volume_profile": "standard",
+      "nutrition_per_100g": {"calories": 100, "carbs_g": 10.0, "protein_g": 5.0, "fat_g": 4.0}
+    }
+  ]
+}

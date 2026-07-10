@@ -1,0 +1,116 @@
+{
+  "tray_id": "school_tray_v1",
+  "description": "Measured school tray compartment specifications. Dimensions are in centimeters; volume is in milliliters.",
+  "layout": {
+    "type": "normalized_top_side_dishes_bottom_rice_soup",
+    "notes": "Top row contains four side-dish cells. Bottom row contains rice on the left and a circular soup bowl on the right.",
+    "roi": {
+      "side_left": {
+        "x": 0.0,
+        "y": 0.025,
+        "width": 0.265,
+        "height": 0.405
+      },
+      "side_middle_left": {
+        "x": 0.275,
+        "y": 0.05,
+        "width": 0.18,
+        "height": 0.38
+      },
+      "side_middle_right": {
+        "x": 0.49,
+        "y": 0.05,
+        "width": 0.18,
+        "height": 0.38
+      },
+      "side_right": {
+        "x": 0.69,
+        "y": 0.05,
+        "width": 0.25,
+        "height": 0.38
+      },
+      "rice": {
+        "x": 0.05,
+        "y": 0.5,
+        "width": 0.435,
+        "height": 0.45
+      },
+      "soup": {
+        "x": 0.525,
+        "y": 0.475,
+        "width": 0.42,
+        "height": 0.525
+      }
+    }
+  },
+  "volume_estimation": {
+    "rice_mound": {
+      "thickness_cm": 1.5
+    },
+    "flat_piece": {
+      "thickness_cm": 1.5,
+      "edge_cell_ids": [
+        "side_left",
+        "side_right"
+      ],
+      "edge_min_area_ratio": 0.8,
+      "middle_span_cell_groups": [
+        [
+          "side_middle_left",
+          "side_middle_right"
+        ]
+      ],
+      "middle_span_min_area_ratio": 0.7
+    }
+  },
+  "cells": [
+    {
+      "cell_id": "rice",
+      "display_name": "Rice cell",
+      "shape": "rectangle",
+      "width_cm": 19.3,
+      "height_cm": 15.2,
+      "depth_cm": 3.0
+    },
+    {
+      "cell_id": "side_left",
+      "display_name": "Left side-dish cell",
+      "shape": "rectangle",
+      "width_cm": 11.1,
+      "height_cm": 8.8,
+      "depth_cm": 3.0
+    },
+    {
+      "cell_id": "side_middle_left",
+      "display_name": "Middle-left side-dish cell",
+      "shape": "rectangle",
+      "width_cm": 11.4,
+      "height_cm": 8.0,
+      "depth_cm": 2.0
+    },
+    {
+      "cell_id": "side_middle_right",
+      "display_name": "Middle-right side-dish cell",
+      "shape": "rectangle",
+      "width_cm": 11.4,
+      "height_cm": 8.0,
+      "depth_cm": 2.0
+    },
+    {
+      "cell_id": "side_right",
+      "display_name": "Right side-dish cell",
+      "shape": "rectangle",
+      "width_cm": 11.1,
+      "height_cm": 8.8,
+      "depth_cm": 3.0
+    },
+    {
+      "cell_id": "soup",
+      "display_name": "Soup bowl",
+      "shape": "circular_bowl",
+      "diameter_cm": 13.0,
+      "depth_cm": 6.0,
+      "volume_model": "spherical_cap"
+    }
+  ]
+}
