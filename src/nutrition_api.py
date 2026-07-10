@@ -18,6 +18,9 @@ DATA_GO_KR_DEFAULT_URLS = [
 FOODSAFETYKOREA_SERVICE_ID = "I2790"
 FOODSAFETYKOREA_BASE_URL = "https://openapi.foodsafetykorea.go.kr/api"
 UNKNOWN_QUERY = "\uc54c \uc218 \uc5c6\uc74c"
+DATA_GO_KR_BACKOFF_SECONDS = 120
+_DATA_GO_KR_BACKOFF_UNTIL = 0.0
+_DATA_GO_KR_BACKOFF_DETAIL = ""
 
 
 def get_nutrition_per_100g(food_key: str, search_name: str | None = None) -> Dict[str, Any]:
@@ -44,7 +47,8 @@ def _get_nutrition_per_100g_cached(
         return tuple(api_result.items())
 
     nutrition = _local_nutrition(food_key)
-    nutrition["detail"] = data_go_kr_detail or foodsafety_detail or public_detail or "using local fallback nutrition"
+    detail = data_go_kr_detail or foodsafety_detail or public_detail or "using local fallback nutrition"
+    nutrition["detail"] = _friendly_api_failure_detail(detail)
     return tuple(nutrition.items())
 
 
@@ -62,6 +66,9 @@ def _cache_token() -> tuple[str, ...]:
 
 
 def _fetch_from_data_go_kr(food_key: str, search_name: str | None = None) -> Tuple[Dict[str, Any] | None, str]:
+    global _DATA_GO_KR_BACKOFF_DETAIL
+    global _DATA_GO_KR_BACKOFF_UNTIL
+
     api_key = (
         get_setting("DATA_GO_KR_API_KEY")
         or get_setting("FOODSAFETYKOREA_API_KEY")
@@ -69,6 +76,10 @@ def _fetch_from_data_go_kr(food_key: str, search_name: str | None = None) -> Tup
     )
     if not api_key:
         return None, "DATA_GO_KR_API_KEY or FOODSAFETYKOREA_API_KEY is not set"
+
+    now = time.monotonic()
+    if now < _DATA_GO_KR_BACKOFF_UNTIL:
+        return None, _DATA_GO_KR_BACKOFF_DETAIL or _friendly_api_failure_detail("data.go.kr is temporarily unavailable")
 
     timeout = float(get_setting("NUTRITION_API_TIMEOUT_SECONDS", "8") or "8")
     limit = get_setting("DATA_GO_KR_RESULT_LIMIT", "5")
@@ -88,10 +99,16 @@ def _fetch_from_data_go_kr(food_key: str, search_name: str | None = None) -> Tup
                 payload, error_detail = _get_json_payload(api_url, params=params, timeout=timeout, source="data.go.kr")
                 if error_detail:
                     details.append(error_detail)
+                    if _is_transient_data_go_kr_failure(error_detail):
+                        _DATA_GO_KR_BACKOFF_UNTIL = time.monotonic() + DATA_GO_KR_BACKOFF_SECONDS
+                        _DATA_GO_KR_BACKOFF_DETAIL = _friendly_api_failure_detail(error_detail)
+                        return None, _DATA_GO_KR_BACKOFF_DETAIL
                     continue
 
                 nutrition = _parse_nutrition_payload(payload)
                 if nutrition is not None:
+                    _DATA_GO_KR_BACKOFF_UNTIL = 0.0
+                    _DATA_GO_KR_BACKOFF_DETAIL = ""
                     nutrition["source"] = "data_go_kr_api"
                     nutrition["detail"] = f"data.go.kr query matched: {query}"
                     return nutrition, ""
@@ -303,6 +320,27 @@ def _extract_api_message(payload: Any) -> str:
 
 def _shorten_detail(detail: str, limit: int = 220) -> str:
     return detail if len(detail) <= limit else f"{detail[:limit]}..."
+
+
+def _is_transient_data_go_kr_failure(detail: str) -> bool:
+    transient_markers = (
+        "status=500",
+        "ReadTimeout",
+        "ConnectTimeout",
+        "ConnectionError",
+        "Unexpected errors",
+    )
+    return any(marker in detail for marker in transient_markers)
+
+
+def _friendly_api_failure_detail(detail: str) -> str:
+    if _is_transient_data_go_kr_failure(detail):
+        return "공공데이터 영양 API가 일시적으로 불안정해 임시 로컬 영양값을 사용했습니다."
+    if "not set" in detail:
+        return "영양 API 키가 설정되지 않아 임시 로컬 영양값을 사용했습니다."
+    if "non-JSON" in detail or "invalid service key" in detail:
+        return "영양 API 응답을 해석하지 못해 임시 로컬 영양값을 사용했습니다. API 키 형식을 확인하세요."
+    return detail
 
 
 def _get_json_payload(

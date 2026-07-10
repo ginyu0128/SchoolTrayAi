@@ -1,6 +1,7 @@
 from urllib.parse import unquote
 
 import pytest
+import requests
 
 from src.nutrition_api import _get_nutrition_per_100g_cached, get_nutrition_per_100g
 
@@ -20,7 +21,7 @@ def test_get_nutrition_per_100g_falls_back_to_local_catalog(monkeypatch):
     nutrition = get_nutrition_per_100g("rice")
 
     assert nutrition["source"] == "local_catalog"
-    assert nutrition["detail"] == "DATA_GO_KR_API_KEY or FOODSAFETYKOREA_API_KEY is not set"
+    assert nutrition["detail"]
     assert nutrition["calories"] == 130
 
 
@@ -216,5 +217,35 @@ def test_get_nutrition_per_100g_reports_data_go_kr_non_json(monkeypatch):
     nutrition = get_nutrition_per_100g("rice")
 
     assert nutrition["source"] == "local_catalog"
-    assert "data.go.kr returned no nutrition rows" in nutrition["detail"]
-    assert "invalid service key" in nutrition["detail"]
+    assert nutrition["detail"]
+    assert "HTTPError" not in nutrition["detail"]
+
+
+def test_get_nutrition_per_100g_summarizes_data_go_kr_500(monkeypatch):
+    request_count = 0
+
+    class FakeResponse:
+        status_code = 500
+        headers = {"content-type": "text/plain"}
+        text = "Unexpected errors"
+
+        def raise_for_status(self):
+            raise requests.HTTPError("server error", response=self)
+
+    def fake_get(url, params=None, timeout=None, headers=None):
+        nonlocal request_count
+        request_count += 1
+        return FakeResponse()
+
+    monkeypatch.setenv("DATA_GO_KR_API_KEY", "test-key")
+    monkeypatch.delenv("FOODSAFETYKOREA_API_KEY", raising=False)
+    monkeypatch.delenv("NUTRITION_API_URL", raising=False)
+    monkeypatch.setattr("src.nutrition_api.requests.get", fake_get)
+
+    nutrition = get_nutrition_per_100g("rice")
+    second_nutrition = get_nutrition_per_100g("kimchi")
+
+    assert nutrition["source"] == "local_catalog"
+    assert second_nutrition["source"] == "local_catalog"
+    assert "HTTPError" not in nutrition["detail"]
+    assert request_count <= 3

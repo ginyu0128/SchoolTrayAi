@@ -294,7 +294,7 @@ if uploaded_file is not None:
 
     if nutrition_details:
         st.warning("일부 항목은 영양 API 검색에 실패해 임시값을 사용했습니다.")
-        with st.expander("영양 API 진단 메시지", expanded=True):
+        with st.expander("영양 API 진단 메시지", expanded=False):
             st.code("\n\n".join(nutrition_details), language="text")
 
     display_columns = [
