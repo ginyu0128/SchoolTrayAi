@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import json
-import os
 from io import BytesIO
 from typing import Any, Dict
 
@@ -12,6 +11,7 @@ import requests
 from PIL import Image
 
 from src.food_catalog import get_food_keys, get_food_profile, normalize_food_key
+from src.settings import get_setting
 
 
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
@@ -19,7 +19,7 @@ OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 
 def classify_food(image: np.ndarray, cell_id: str | None = None) -> Dict[str, Any]:
     """Classify food with OpenAI Vision when configured, otherwise fallback."""
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = get_setting("OPENAI_API_KEY")
     if api_key:
         return _classify_with_openai(image, cell_id, api_key)
     return _classify_with_rules(image, cell_id)
@@ -44,7 +44,7 @@ def _classify_with_openai(image: np.ndarray, cell_id: str | None, api_key: str) 
     )
 
     payload = {
-        "model": os.getenv("OPENAI_VISION_MODEL", "gpt-4.1-mini"),
+        "model": get_setting("OPENAI_VISION_MODEL", "gpt-4.1-mini"),
         "input": [
             {
                 "role": "user",

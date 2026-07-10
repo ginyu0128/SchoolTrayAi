@@ -45,7 +45,7 @@ def test_get_nutrition_per_100g_uses_data_go_kr_api(monkeypatch):
 
     def fake_get(url, params, timeout):
         requested.append((url, params))
-        assert timeout == 4
+        assert timeout == 8
         return FakeResponse()
 
     monkeypatch.setenv("FOODSAFETYKOREA_API_KEY", "test-key")

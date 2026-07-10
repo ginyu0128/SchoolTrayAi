@@ -1,5 +1,3 @@
-import os
-
 import streamlit as st
 
 from src.image_io import ImageLoadError, load_uploaded_image
@@ -7,6 +5,7 @@ from src.tray_pipeline import estimate_tray_nutrition
 from src.cell_splitter import draw_cell_overlay, split_tray_cells
 from src.tray_detector import detect_tray, draw_tray_detection
 from src.diabetes_advice import build_diabetes_advice
+from src.settings import get_setting
 
 
 def inject_page_styles() -> None:
@@ -208,12 +207,12 @@ st.set_page_config(page_title="SchoolTrayAI", layout="wide")
 inject_page_styles()
 render_header()
 
-if os.getenv("OPENAI_API_KEY"):
+if get_setting("OPENAI_API_KEY"):
     st.caption("음식 인식: OpenAI Vision 활성화")
 else:
     st.warning("OPENAI_API_KEY가 설정되지 않아 AI 음식 인식이 비활성화되어 있습니다.")
 
-if os.getenv("FOODSAFETYKOREA_API_KEY") or os.getenv("DATA_GO_KR_API_KEY"):
+if get_setting("FOODSAFETYKOREA_API_KEY") or get_setting("DATA_GO_KR_API_KEY"):
     st.caption("영양정보 API: 공공데이터포털 연동 활성화")
 else:
     st.warning("영양정보 API 키가 설정되지 않아 임시 로컬 영양값을 사용합니다.")

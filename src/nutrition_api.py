@@ -7,6 +7,7 @@ from urllib.parse import quote
 import requests
 
 from src.food_catalog import get_food_profile, normalize_food_key
+from src.settings import get_setting
 
 DATA_GO_KR_DEFAULT_URLS = [
     "https://apis.data.go.kr/1471000/FoodNtrCpntDbInfo/getFoodNtrCpntDbInq",
@@ -38,16 +39,16 @@ def get_nutrition_per_100g(food_key: str, search_name: str | None = None) -> Dic
 
 def _fetch_from_data_go_kr(food_key: str, search_name: str | None = None) -> Tuple[Dict[str, Any] | None, str]:
     api_key = (
-        os.getenv("DATA_GO_KR_API_KEY")
-        or os.getenv("FOODSAFETYKOREA_API_KEY")
-        or os.getenv("NUTRITION_API_KEY")
+        get_setting("DATA_GO_KR_API_KEY")
+        or get_setting("FOODSAFETYKOREA_API_KEY")
+        or get_setting("NUTRITION_API_KEY")
     )
     if not api_key:
         return None, "DATA_GO_KR_API_KEY or FOODSAFETYKOREA_API_KEY is not set"
 
-    timeout = float(os.getenv("NUTRITION_API_TIMEOUT_SECONDS", "4"))
-    limit = os.getenv("DATA_GO_KR_RESULT_LIMIT", "5")
-    query_param = os.getenv("DATA_GO_KR_QUERY_PARAM", "DESC_KOR")
+    timeout = float(get_setting("NUTRITION_API_TIMEOUT_SECONDS", "8") or "8")
+    limit = get_setting("DATA_GO_KR_RESULT_LIMIT", "5")
+    query_param = get_setting("DATA_GO_KR_QUERY_PARAM", "DESC_KOR")
     details = []
 
     for api_url in _data_go_kr_urls():
@@ -80,20 +81,20 @@ def _fetch_from_data_go_kr(food_key: str, search_name: str | None = None) -> Tup
                     detail = f"{detail} ({api_message})"
                 details.append(detail)
             except requests.RequestException as exc:
-                details.append(f"data.go.kr request failed: {type(exc).__name__}")
+                details.append(_request_exception_detail(exc, "data.go.kr"))
 
     return None, f"data.go.kr returned no nutrition rows; tried {_shorten_detail('; '.join(details))}"
 
 
 def _fetch_from_foodsafetykorea(food_key: str, search_name: str | None = None) -> Tuple[Dict[str, Any] | None, str]:
-    api_key = os.getenv("FOODSAFETYKOREA_NATIVE_API_KEY")
+    api_key = get_setting("FOODSAFETYKOREA_NATIVE_API_KEY")
     if not api_key:
         return None, "FOODSAFETYKOREA_NATIVE_API_KEY is not set"
 
-    service_id = os.getenv("FOODSAFETYKOREA_SERVICE_ID", FOODSAFETYKOREA_SERVICE_ID)
-    base_url = os.getenv("FOODSAFETYKOREA_BASE_URL", FOODSAFETYKOREA_BASE_URL)
-    limit = os.getenv("FOODSAFETYKOREA_RESULT_LIMIT", "5")
-    timeout = float(os.getenv("NUTRITION_API_TIMEOUT_SECONDS", "4"))
+    service_id = get_setting("FOODSAFETYKOREA_SERVICE_ID", FOODSAFETYKOREA_SERVICE_ID)
+    base_url = get_setting("FOODSAFETYKOREA_BASE_URL", FOODSAFETYKOREA_BASE_URL)
+    limit = get_setting("FOODSAFETYKOREA_RESULT_LIMIT", "5")
+    timeout = float(get_setting("NUTRITION_API_TIMEOUT_SECONDS", "8") or "8")
     details = []
 
     for query in _query_candidates(food_key, search_name):
@@ -118,7 +119,7 @@ def _fetch_from_foodsafetykorea(food_key: str, search_name: str | None = None) -
                 detail = f"{detail} ({api_message})"
             details.append(detail)
         except requests.RequestException as exc:
-            return None, f"FoodSafetyKorea request failed: {type(exc).__name__}"
+            return None, _request_exception_detail(exc, "FoodSafetyKorea")
         except (ValueError, KeyError, TypeError) as exc:
             return None, f"FoodSafetyKorea response parse failed: {type(exc).__name__}"
 
@@ -126,17 +127,17 @@ def _fetch_from_foodsafetykorea(food_key: str, search_name: str | None = None) -
 
 
 def _fetch_from_public_api(food_key: str, search_name: str | None = None) -> Tuple[Dict[str, Any] | None, str]:
-    api_url = os.getenv("NUTRITION_API_URL")
+    api_url = get_setting("NUTRITION_API_URL")
     if not api_url:
         return None, "NUTRITION_API_URL is not set"
 
-    query_param = os.getenv("NUTRITION_API_QUERY_PARAM", "food_name")
-    key_param = os.getenv("NUTRITION_API_KEY_PARAM", "serviceKey")
-    timeout = float(os.getenv("NUTRITION_API_TIMEOUT_SECONDS", "4"))
+    query_param = get_setting("NUTRITION_API_QUERY_PARAM", "food_name")
+    key_param = get_setting("NUTRITION_API_KEY_PARAM", "serviceKey")
+    timeout = float(get_setting("NUTRITION_API_TIMEOUT_SECONDS", "8") or "8")
 
     for query in _query_candidates(food_key, search_name):
         params = {query_param: query, "type": "json"}
-        api_key = os.getenv("NUTRITION_API_KEY")
+        api_key = get_setting("NUTRITION_API_KEY")
         if api_key:
             params[key_param] = api_key
 
@@ -287,6 +288,17 @@ def _extract_api_message(payload: Any) -> str:
 
 def _shorten_detail(detail: str, limit: int = 220) -> str:
     return detail if len(detail) <= limit else f"{detail[:limit]}..."
+
+
+def _request_exception_detail(exc: requests.RequestException, source: str) -> str:
+    response = getattr(exc, "response", None)
+    if response is not None:
+        preview = response.text[:160].replace("\n", " ").replace("\r", " ").strip()
+        return (
+            f"{source} request failed: {type(exc).__name__} "
+            f"status={response.status_code}, body={preview}"
+        )
+    return f"{source} request failed: {type(exc).__name__}"
 
 
 def _non_json_response_detail(response: requests.Response, source: str) -> str:
