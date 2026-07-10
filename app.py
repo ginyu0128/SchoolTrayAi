@@ -284,8 +284,17 @@ if uploaded_file is not None:
     metric_cols[3].metric("단백질 / 지방", f"{float(total_row['protein_g']):.1f} g / {float(total_row['fat_g']):.1f} g")
 
     nutrition_details = []
+    fallback_food_names = []
     if "nutrition_detail" in nutrition_summary.columns:
-        local_rows = nutrition_summary[nutrition_summary["nutrition_source"] == "local_catalog"]
+        local_rows = nutrition_summary[
+            (nutrition_summary["nutrition_source"] == "local_catalog")
+            & (nutrition_summary["cell_id"] != "TOTAL")
+        ]
+        fallback_food_names = [
+            str(name)
+            for name in local_rows["food_name"].dropna().unique()
+            if str(name).strip() and str(name).strip().lower() != "total"
+        ]
         nutrition_details = [
             str(detail)
             for detail in local_rows["nutrition_detail"].dropna().unique()
@@ -293,7 +302,12 @@ if uploaded_file is not None:
         ]
 
     if nutrition_details:
-        st.warning("일부 항목은 영양 API 검색에 실패해 임시값을 사용했습니다.")
+        fallback_label = ", ".join(fallback_food_names[:4]) or "일부 음식"
+        if len(fallback_food_names) > 4:
+            fallback_label = f"{fallback_label} 외 {len(fallback_food_names) - 4}개"
+        st.warning(
+            f"영양 API에서 일부 음식({fallback_label})을 찾지 못해 해당 항목만 임시값을 사용했습니다."
+        )
         with st.expander("영양 API 진단 메시지", expanded=False):
             st.code("\n\n".join(nutrition_details), language="text")
 
