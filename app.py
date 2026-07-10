@@ -310,7 +310,6 @@ if uploaded_file is not None:
         "nutrition_source",
         "classification_confidence",
         "classification_reason",
-        "nutrition_detail",
     ]
     visible_columns = [column for column in display_columns if column in nutrition_summary.columns]
     column_labels = {
@@ -326,7 +325,6 @@ if uploaded_file is not None:
         "nutrition_source": "영양 출처",
         "classification_confidence": "인식 신뢰도",
         "classification_reason": "인식 근거",
-        "nutrition_detail": "영양 API 상세",
     }
     st.dataframe(
         nutrition_summary[visible_columns].rename(columns=column_labels),
