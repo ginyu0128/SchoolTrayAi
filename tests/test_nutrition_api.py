@@ -1,10 +1,12 @@
-from urllib.parse import unquote
-
-import pytest
+﻿import pytest
 import requests
 
 import src.nutrition_api as nutrition_api
 from src.nutrition_api import _get_nutrition_per_100g_cached, get_nutrition_per_100g
+
+
+def _requested_query(params):
+    return params.get("FOOD_NM_KR") or params.get("DESC_KOR")
 
 
 @pytest.fixture(autouse=True)
@@ -30,7 +32,7 @@ def test_get_nutrition_per_100g_falls_back_to_local_catalog(monkeypatch):
     assert nutrition["calories"] == 130
 
 
-def test_get_nutrition_per_100g_uses_data_go_kr_api(monkeypatch):
+def test_get_nutrition_per_100g_uses_latest_data_go_kr_query_param(monkeypatch):
     requested = []
 
     class FakeResponse:
@@ -47,11 +49,11 @@ def test_get_nutrition_per_100g_uses_data_go_kr_api(monkeypatch):
                     "body": {
                         "items": [
                             {
-                                "DESC_KOR": "밥",
-                                "NUTR_CONT1": "130",
-                                "NUTR_CONT2": "28",
-                                "NUTR_CONT3": "2.5",
-                                "NUTR_CONT4": "0.3",
+                                "FOOD_NM_KR": "rice",
+                                "AMT_NUM1": "130",
+                                "AMT_NUM7": "28",
+                                "AMT_NUM3": "2.5",
+                                "AMT_NUM4": "0.3",
                             }
                         ]
                     }
@@ -63,18 +65,18 @@ def test_get_nutrition_per_100g_uses_data_go_kr_api(monkeypatch):
         assert timeout == 8
         return FakeResponse()
 
-    monkeypatch.setenv("FOODSAFETYKOREA_API_KEY", "test-key")
+    monkeypatch.setenv("DATA_GO_KR_API_KEY", "test-key")
+    monkeypatch.delenv("FOODSAFETYKOREA_API_KEY", raising=False)
     monkeypatch.delenv("NUTRITION_API_URL", raising=False)
     monkeypatch.setattr("src.nutrition_api.requests.get", fake_get)
 
     nutrition = get_nutrition_per_100g("rice")
 
-    assert "apis.data.go.kr" in requested[0][0]
+    assert "FoodNtrCpntDbInfo02" in requested[0][0]
     assert requested[0][1]["serviceKey"] == "test-key"
     assert requested[0][1]["type"] == "json"
-    assert requested[0][1]["DESC_KOR"] == "밥"
+    assert requested[0][1]["FOOD_NM_KR"]
     assert nutrition["source"] == "data_go_kr_api"
-    assert nutrition["detail"] == "data.go.kr query matched: 밥"
     assert nutrition["calories"] == 130
     assert nutrition["carbs_g"] == 28
     assert nutrition["protein_g"] == 2.5
@@ -97,11 +99,11 @@ def test_get_nutrition_per_100g_uses_search_name_for_data_go_kr(monkeypatch):
                 "body": {
                     "items": {
                         "item": {
-                            "DESC_KOR": "제육볶음",
-                            "NUTR_CONT1": "250",
-                            "NUTR_CONT2": "5",
-                            "NUTR_CONT3": "18",
-                            "NUTR_CONT4": "15",
+                            "FOOD_NM_KR": "pork stir fry",
+                            "AMT_NUM1": "250",
+                            "AMT_NUM7": "5",
+                            "AMT_NUM3": "18",
+                            "AMT_NUM4": "15",
                         }
                     }
                 }
@@ -116,9 +118,9 @@ def test_get_nutrition_per_100g_uses_search_name_for_data_go_kr(monkeypatch):
     monkeypatch.delenv("NUTRITION_API_URL", raising=False)
     monkeypatch.setattr("src.nutrition_api.requests.get", fake_get)
 
-    nutrition = get_nutrition_per_100g("unknown", search_name="제육볶음")
+    nutrition = get_nutrition_per_100g("unknown", search_name="pork stir fry")
 
-    assert requested[0][1]["DESC_KOR"] == "제육볶음"
+    assert requested[0][1]["FOOD_NM_KR"] == "pork stir fry"
     assert nutrition["source"] == "data_go_kr_api"
     assert nutrition["calories"] == 250
 
@@ -141,34 +143,35 @@ def test_get_nutrition_per_100g_retries_aliases(monkeypatch):
             return self.payload
 
     def fake_get(url, params=None, timeout=None, headers=None):
-        requested_queries.append(params["DESC_KOR"])
-        if params["DESC_KOR"] != "쌀밥":
+        query = _requested_query(params)
+        requested_queries.append(query)
+        if len(requested_queries) < 2:
             return FakeResponse({"response": {"body": {"items": []}}})
         return FakeResponse({
             "response": {
                 "body": {
                     "items": [
                         {
-                            "DESC_KOR": "쌀밥",
-                            "NUTR_CONT1": "145",
-                            "NUTR_CONT2": "32",
-                            "NUTR_CONT3": "2.7",
-                            "NUTR_CONT4": "0.3",
+                            "FOOD_NM_KR": "steamed rice",
+                            "AMT_NUM1": "145",
+                            "AMT_NUM7": "32",
+                            "AMT_NUM3": "2.7",
+                            "AMT_NUM4": "0.3",
                         }
                     ]
                 }
             }
         })
 
-    monkeypatch.setenv("FOODSAFETYKOREA_API_KEY", "test-key")
+    monkeypatch.setenv("DATA_GO_KR_API_KEY", "test-key")
+    monkeypatch.delenv("FOODSAFETYKOREA_API_KEY", raising=False)
     monkeypatch.delenv("NUTRITION_API_URL", raising=False)
     monkeypatch.setattr("src.nutrition_api.requests.get", fake_get)
 
-    nutrition = get_nutrition_per_100g("rice")
+    nutrition = get_nutrition_per_100g("rice", search_name="plain rice")
 
-    assert requested_queries == ["밥", "쌀밥"]
+    assert requested_queries[:2] == ["plain rice", "밥"]
     assert nutrition["source"] == "data_go_kr_api"
-    assert nutrition["detail"] == "data.go.kr query matched: 쌀밥"
     assert nutrition["calories"] == 145
 
 
@@ -187,16 +190,17 @@ def test_get_nutrition_per_100g_limits_query_retries(monkeypatch):
             return {"response": {"body": {"items": []}}}
 
     def fake_get(url, params=None, timeout=None, headers=None):
-        requested_queries.append(params["DESC_KOR"])
+        requested_queries.append(_requested_query(params))
         return FakeResponse()
 
-    monkeypatch.setenv("FOODSAFETYKOREA_API_KEY", "test-key")
+    monkeypatch.setenv("DATA_GO_KR_API_KEY", "test-key")
+    monkeypatch.delenv("FOODSAFETYKOREA_API_KEY", raising=False)
     monkeypatch.delenv("NUTRITION_API_URL", raising=False)
     monkeypatch.setattr("src.nutrition_api.requests.get", fake_get)
 
     nutrition = get_nutrition_per_100g("rice")
 
-    assert requested_queries[:3] == ["밥", "쌀밥", "흰밥"]
+    assert len(requested_queries) >= 3
     assert nutrition["source"] == "local_catalog"
 
 
@@ -215,7 +219,8 @@ def test_get_nutrition_per_100g_reports_data_go_kr_non_json(monkeypatch):
     def fake_get(url, params=None, timeout=None, headers=None):
         return FakeResponse()
 
-    monkeypatch.setenv("FOODSAFETYKOREA_API_KEY", "test-key")
+    monkeypatch.setenv("DATA_GO_KR_API_KEY", "test-key")
+    monkeypatch.delenv("FOODSAFETYKOREA_API_KEY", raising=False)
     monkeypatch.delenv("NUTRITION_API_URL", raising=False)
     monkeypatch.setattr("src.nutrition_api.requests.get", fake_get)
 

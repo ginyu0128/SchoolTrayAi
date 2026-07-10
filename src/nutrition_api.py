@@ -15,6 +15,10 @@ DATA_GO_KR_DEFAULT_URLS = [
     "https://apis.data.go.kr/1471000/FoodNtrCpntDbInfo02/getFoodNtrCpntDbInq02",
     "https://apis.data.go.kr/1471000/FoodNtrCpntDbInfo/getFoodNtrCpntDbInq",
 ]
+DATA_GO_KR_QUERY_PARAMS_BY_PATH = {
+    "FoodNtrCpntDbInfo02": "FOOD_NM_KR",
+    "FoodNtrCpntDbInfo": "DESC_KOR",
+}
 FOODSAFETYKOREA_SERVICE_ID = "I2790"
 FOODSAFETYKOREA_BASE_URL = "https://openapi.foodsafetykorea.go.kr/api"
 UNKNOWN_QUERY = "\uc54c \uc218 \uc5c6\uc74c"
@@ -83,11 +87,11 @@ def _fetch_from_data_go_kr(food_key: str, search_name: str | None = None) -> Tup
 
     timeout = float(get_setting("NUTRITION_API_TIMEOUT_SECONDS", "8") or "8")
     limit = get_setting("DATA_GO_KR_RESULT_LIMIT", "5")
-    query_param = get_setting("DATA_GO_KR_QUERY_PARAM", "DESC_KOR")
     details = []
     transient_failure_seen = False
 
     for api_url in _data_go_kr_urls():
+        query_param = _data_go_kr_query_param(api_url)
         for query in _query_candidates(food_key, search_name):
             params = {
                 "serviceKey": api_key,
@@ -268,6 +272,17 @@ def _data_go_kr_urls() -> list[str]:
     if configured:
         return [url.strip() for url in configured.split(",") if url.strip()]
     return DATA_GO_KR_DEFAULT_URLS
+
+
+def _data_go_kr_query_param(api_url: str) -> str:
+    configured = get_setting("DATA_GO_KR_QUERY_PARAM")
+    if configured:
+        return configured
+
+    for path_marker, query_param in DATA_GO_KR_QUERY_PARAMS_BY_PATH.items():
+        if path_marker in api_url:
+            return query_param
+    return "DESC_KOR"
 
 
 def _clean_query(query: str | None) -> str:
